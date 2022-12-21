@@ -1,7 +1,4 @@
-type RevueCompoent<T = Record<string, any>> = (
-  props: T,
-  element: RevueElement
-) => RevueElement;
+type RevueCompoent<T = Record<string, any>> = (props: T) => RevueElement;
 const REVUE_ELEMENT: Symbol = Symbol();
 
 export interface State {
@@ -16,20 +13,38 @@ export class StateImpl implements State {
 export interface RevueElement {
   rawType: Symbol;
   el: Element | null;
-  state: any;
+  state: HookState;
+  updateQueue: UpdateQueue;
   childElement: RevueElement | null;
   type: string | RevueCompoent;
   update: any;
+  isMounted: boolean;
   props: Record<string, any>;
   children: (RevueElement | any)[];
 }
 
+let workInProcessElement: RevueElement | null = null;
+
+const attrMap: Record<string, string> = {
+  className: "class",
+  onClick: "onclick",
+};
+
 class RevueElementImpl implements RevueElement {
   rawType = REVUE_ELEMENT;
   el = null;
-  state = null;
+  updateQueue = {
+    update: null,
+    lastUpdate: null,
+  };
+  state = {
+    currentHook: null,
+    firstHook: null,
+  };
+
   childElement = null;
   update = null;
+  isMounted = false;
   constructor(
     public type: RevueElement["type"],
     public props: RevueElement["props"],
@@ -62,7 +77,8 @@ function updateElement(el: Element, props: Record<string, any>) {
   for (const prop in props) {
     if (props.hasOwnProperty(prop)) {
       const value = props[prop];
-      (el as any)[prop] = value;
+      const rawAttrName = attrMap[prop];
+      (el as any)[rawAttrName ? rawAttrName : prop] = value;
     }
   }
 }
@@ -93,7 +109,12 @@ function diff(
     const fnElements = [];
     while (typeof revueElement.type !== "string") {
       fnElements.push(revueElement);
-      revueElement = revueElement.type(revueElement.props, revueElement);
+      const prewWorkInProcessElement: RevueElement | null =
+        workInProcessElement;
+      workInProcessElement = element;
+      revueElement = revueElement.type(revueElement.props);
+      workInProcessElement.isMounted = true;
+      workInProcessElement = prewWorkInProcessElement;
     }
     fnElements.forEach((element: RevueElement) => {
       element.childElement = revueElement;
@@ -159,4 +180,97 @@ export function createRoot(element: RevueElement) {
       diff(element, container);
     },
   };
+}
+
+type HookState = {
+  currentHook: Hook | null;
+  firstHook: Hook | null;
+};
+
+type Hook = {
+  initValue: any;
+  value: any;
+  next: Hook | null;
+};
+
+type UpdateQueue = {
+  update: Update | null;
+  lastUpdate: Update | null;
+};
+
+type Update<A = any> = {
+  action: A;
+  next: Update | null;
+};
+
+function createUpdate<A>(action: A): Update<A> {
+  return {
+    action,
+    next: null,
+  };
+}
+
+function createHook(initValue: any): Hook {
+  return {
+    initValue,
+    value: initValue,
+    next: null,
+  };
+}
+
+function getHook(defalutValue: any): Hook {
+  const element = workInProcessElement as RevueElement;
+  const isMounted = element.isMounted;
+  const hookState = element.state;
+
+  if (isMounted) {
+    const hook = hookState.currentHook as Hook;
+    hookState.currentHook = hook.next;
+    return hook;
+  } else {
+    const hook = createHook(defalutValue);
+    if (!hookState.currentHook) {
+      hook.next = hook;
+      hookState.firstHook = hook;
+      hookState.currentHook = hook;
+    } else {
+      hook.next = hookState.firstHook;
+      hookState.currentHook.next = hook;
+    }
+
+    return hook;
+  }
+}
+
+export function useState<V = any>(defalutValue: V) {
+  const element = workInProcessElement as RevueElement;
+  const hook = getHook(defalutValue);
+
+  return [
+    hook.value,
+    (value: V) => {
+      const updateQueue = element.updateQueue;
+
+      const update = createUpdate(() => {
+        hook.value = value;
+      });
+
+      if (!updateQueue.lastUpdate) {
+        updateQueue.update = update;
+        updateQueue.lastUpdate = update;
+        setTimeout(() => {
+          while (updateQueue.update) {
+            updateQueue.update.action();
+            updateQueue.update = updateQueue.update.next;
+          }
+          updateQueue.lastUpdate = null;
+          console.log(11111);
+          element.update();
+        }, 0);
+      } else {
+        updateQueue.lastUpdate.next = update;
+        updateQueue.lastUpdate = update;
+      }
+    },
+  ];
 }

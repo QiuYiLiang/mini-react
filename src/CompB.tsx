@@ -1,5 +1,5 @@
 import { createElement } from "./revue";
 
 export const CompB = () => {
-  return <h2 class="hi">CompB,</h2>;
+  return <h2 className="hi">CompB,</h2>;
 };

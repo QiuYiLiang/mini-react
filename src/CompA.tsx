@@ -1,26 +1,22 @@
-import { createElement } from "./revue";
+import { createElement, useState } from "./revue";
 import { CompB } from "./CompB";
 
-export const CompA = (props: any, element: any) => {
-  if (!element.state) {
-    element.state = {
-      count: 0,
-    };
-  }
+export const CompA = () => {
+  const [count, setCount] = useState(0);
+  const [count2, setCount2] = useState(2);
 
   return (
-    <h1 class="hi">
+    <h1 className="hi">
       <button
-        onclick={() => {
-          element.state.count++;
-
-          element.update();
+        onClick={() => {
+          setCount(count + 1);
+          setCount2(count2 + 2);
         }}
       >
-        {element.state.count}
+        {count}-{count2}
       </button>
-      {element.state.count > 1 ? <button>hi</button> : <div></div>}
-      <span class="span">哈哈</span>
+      {count > 1 ? <button>hi</button> : <div></div>}
+      <span className="span">哈哈</span>
       <CompB />
     </h1>
   );
