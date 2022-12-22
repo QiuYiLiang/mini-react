@@ -1,0 +1,7 @@
+{
+  "defaultWatch": "revue",
+  "targets": ["revue"],
+  "external": [],
+  "globals": [],
+  "sourcemap": true
+}

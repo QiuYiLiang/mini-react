@@ -1,5 +1,5 @@
 import { CompA } from "./CompA";
-import { createElement, createRoot } from "./revue";
+import { createElement, createRoot } from "@qiuyl/revue";
 
 const root = createRoot(<CompA />);
 

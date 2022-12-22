@@ -1,0 +1,26 @@
+{
+  "name": "@qiuyl/revue",
+  "version": "1.0.0",
+  "description": "",
+  "keywords": [],
+  "author": "",
+  "buildOptions": {
+    "formats": [
+      "es",
+      "cjs"
+    ]
+  },
+  "files": [
+    "dist"
+  ],
+  "main": "./dist/revue.cjs.js",
+  "module": "./dist/revue.es.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/revue.es.js",
+      "require": "./dist/revue.cjs.js",
+      "types": "./dist/index.d.ts"
+    }
+  }
+}

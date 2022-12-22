@@ -1,9 +1,30 @@
 type RevueCompoent<T = Record<string, any>> = (props: T) => RevueElement;
 const REVUE_ELEMENT: Symbol = Symbol();
 
-export interface State {
+interface State {
   value: any;
   next: State | null;
+}
+
+interface HookState {
+  currentHook: Hook | null;
+  firstHook: Hook | null;
+}
+
+interface Hook {
+  initValue: any;
+  value: any;
+  next: Hook | null;
+}
+
+interface UpdateQueue {
+  update: Update | null;
+  lastUpdate: Update | null;
+}
+
+interface Update<A = any> {
+  action: A;
+  next: Update | null;
 }
 
 export class StateImpl implements State {
@@ -182,27 +203,6 @@ export function createRoot(element: RevueElement) {
   };
 }
 
-type HookState = {
-  currentHook: Hook | null;
-  firstHook: Hook | null;
-};
-
-type Hook = {
-  initValue: any;
-  value: any;
-  next: Hook | null;
-};
-
-type UpdateQueue = {
-  update: Update | null;
-  lastUpdate: Update | null;
-};
-
-type Update<A = any> = {
-  action: A;
-  next: Update | null;
-};
-
 function createUpdate<A>(action: A): Update<A> {
   return {
     action,
@@ -264,7 +264,6 @@ export function useState<V = any>(defalutValue: V) {
             updateQueue.update = updateQueue.update.next;
           }
           updateQueue.lastUpdate = null;
-          console.log(11111);
           element.update();
         }, 0);
       } else {

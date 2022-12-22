@@ -1,4 +1,4 @@
-import { createElement, useState } from "./revue";
+import { createElement, useState } from "@qiuyl/revue";
 import { CompB } from "./CompB";
 
 export const CompA = () => {

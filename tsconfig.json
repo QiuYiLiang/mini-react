@@ -1,21 +1,24 @@
 {
   "compilerOptions": {
-    "target": "ESNext",
-    "useDefineForClassFields": true,
-    "module": "ESNext",
-    "lib": ["ESNext", "DOM"],
-    "moduleResolution": "Node",
     "strict": true,
+    "baseUrl": ".",
+    "lib": ["DOM", "DOM.Iterable", "ESNext"],
+    "paths": {
+      "*": ["packages/*/src"],
+      "@qiuyl/revue": ["packages/revue/src"]
+    },
+    "sourceMap": true,
+    "target": "ESNext",
+    "allowJs": false,
+    "skipLibCheck": true,
+    "esModuleInterop": false,
+    "allowSyntheticDefaultImports": true,
+    "forceConsistentCasingInFileNames": true,
+    "module": "ESNext",
+    "moduleResolution": "Node",
     "resolveJsonModule": true,
     "isolatedModules": true,
-    "esModuleInterop": true,
-    "noEmit": true,
-    "jsx": "react-jsx",
-    "jsxFactory": "createElement",
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "noImplicitReturns": true,
-    "skipLibCheck": true
+    "noEmit": true
   },
-  "include": ["src"]
+  "include": ["packages/*/src"]
 }
