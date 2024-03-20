@@ -68,7 +68,7 @@ let nextUnitOfWork: Fiber | undefined;
 function workLoop(deadline: IdleDeadline) {
   let shouldYield = false;
   while (nextUnitOfWork && !shouldYield) {
-    nextUnitOfWork = processUnitOfWork(nextUnitOfWork);
+    nextUnitOfWork = performUnitOfWork(nextUnitOfWork);
     shouldYield = deadline.timeRemaining() < 1;
   }
   // fiber 构造完毕，提交更新
@@ -81,7 +81,7 @@ function workLoop(deadline: IdleDeadline) {
 requestIdleCallback(workLoop);
 
 // 执行 fiber 初始化工作
-function processUnitOfWork(fiber: Fiber) {
+function performUnitOfWork(fiber: Fiber) {
   const elements = (fiber.props.children || []) as MiniReactElement[];
   let index = 0;
   let prevFiber: Fiber | undefined;
