@@ -83,10 +83,11 @@ function processUnitOfWork(fiber: Fiber) {
       type: element.type,
       props: element.props,
       return: fiber,
-      sibling: prevFiber,
     };
     if (index === 0) {
       fiber.child = newFiber;
+    } else {
+      (prevFiber as Fiber).sibling = newFiber;
     }
     index++;
     prevFiber = newFiber;

@@ -2,6 +2,11 @@
 import MiniReact from "@qiuyl/mini-react";
 
 const a = <button>click</button>;
-// const b = <button><p>1</p><p>2</p></button>
+const b = (
+  <button>
+    <p>1</p>
+    <p>2</p>
+  </button>
+);
 
-MiniReact.createRoot(document.getElementById("root") as HTMLElement).render(a);
+MiniReact.createRoot(document.getElementById("root") as HTMLElement).render(b);
