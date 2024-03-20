@@ -10,6 +10,7 @@ interface FiberRoot extends BaseFiber {
   props: {
     children: MiniReactElement[];
   };
+  deletions: Fiber[];
 }
 interface BaseFiber {
   props: Record<string, any>;
@@ -17,10 +18,18 @@ interface BaseFiber {
   child?: Fiber;
   sibling?: Fiber;
 }
+
+enum FiberFlag {
+  UPDATE,
+  DELETION,
+  PLACEMAENT,
+}
+
 interface Fiber extends BaseFiber {
   type: string | Symbol;
-  dom?: HTMLElement;
+  el?: HTMLElement;
   alternate?: Fiber;
+  flag: FiberFlag;
 }
 
 const TEXT_ELEMENT = Symbol.for("TEXT_ELEMENT");
@@ -48,17 +57,43 @@ function createElement(
   };
 }
 
+function updateDom(fiber: Fiber) {
+  const { children = [], ...props } = fiber.props;
+  const { childre: oldChildren = [], ...oldProps } = (fiber.alternate as Fiber)
+    .props;
+  Object.keys(props).forEach((propKey) => {
+    const newValue = props[propKey];
+    const oldValue = oldProps[propKey];
+    // prop 改变后更新 dom
+    if (newValue !== oldValue) {
+      (fiber.el as HTMLElement as any)[propKey] = newValue;
+    }
+  });
+}
+
 // 提交 fiber 效果突变，更新 dom
 function commitEffectMutation(fiber: Fiber) {
-  const dom =
-    fiber.type === TEXT_ELEMENT
-      ? document.createTextNode("")
-      : (document.createElement(fiber.type as string) as any);
-  const { children = [], ...props } = fiber.props;
-  Object.keys(props).forEach((propKey) => {
-    dom[propKey] = props[propKey];
-  });
-  return dom;
+  switch (fiber.flag) {
+    case FiberFlag.PLACEMAENT: {
+      fiber.el =
+        fiber.type === TEXT_ELEMENT
+          ? document.createTextNode("")
+          : (document.createElement(fiber.type as string) as any);
+      updateDom(fiber);
+      const parentEl = findParentEl(fiber);
+      parentEl.appendChild(fiber.el as HTMLElement);
+      break;
+    }
+    case FiberFlag.UPDATE: {
+      updateDom(fiber);
+      break;
+    }
+    case FiberFlag.DELETION: {
+      const parentEl = findParentEl(fiber);
+      parentEl.removeChild(fiber.el as HTMLElement);
+      break;
+    }
+  }
 }
 
 let completeRoot: FiberRoot | undefined;
@@ -99,17 +134,44 @@ function performUnitOfWork(fiber: Fiber) {
 function reconcileChildren(fiber: Fiber, children: MiniReactElement[]) {
   let index = 0;
   let prevFiber: Fiber | undefined;
-  while (index < children.length) {
+  let oldFiber: Fiber | undefined = fiber.alternate?.child;
+  while (index < children.length || oldFiber) {
     const element = children[index];
-    const newFiber: Fiber = {
-      type: element.type,
-      props: element.props,
-      return: fiber,
-    };
-    if (index === 0) {
-      fiber.child = newFiber;
+    let newFiber: Fiber | undefined;
+    const sameType = oldFiber?.type === element?.type;
+
+    if (sameType) {
+      newFiber = {
+        type: element.type,
+        props: element.props,
+        alternate: oldFiber,
+        el: (oldFiber as Fiber).el,
+        flag: FiberFlag.UPDATE,
+      };
     } else {
-      (prevFiber as Fiber).sibling = newFiber;
+      if (element) {
+        newFiber = {
+          type: element.type,
+          props: element.props,
+          flag: FiberFlag.PLACEMAENT,
+        };
+      }
+      if (oldFiber) {
+        oldFiber.flag = FiberFlag.DELETION;
+        (workInProcessRoot as FiberRoot).deletions.push(oldFiber);
+      }
+    }
+
+    if (oldFiber) {
+      oldFiber = oldFiber.sibling;
+    }
+    if (element) {
+      (newFiber as Fiber).return = fiber;
+      if (index === 0) {
+        (fiber as Fiber).child = newFiber;
+      } else {
+        (prevFiber as Fiber).sibling = newFiber;
+      }
     }
     index++;
     prevFiber = newFiber;
@@ -118,23 +180,30 @@ function reconcileChildren(fiber: Fiber, children: MiniReactElement[]) {
 
 // 提交 fiberRoot 更新 dom
 function commitRoot() {
+  (workInProcessRoot as FiberRoot).deletions.forEach((fiber) => {
+    const parentEl = findParentEl(fiber);
+    parentEl.removeChild(fiber.el as HTMLElement);
+  });
   commitUnitOfWork((workInProcessRoot as FiberRoot).child as Fiber);
+
   completeRoot = workInProcessRoot;
   workInProcessRoot = undefined;
+}
+
+function findParentEl(fiber: Fiber) {
+  let parentEl: HTMLElement | undefined;
+  while (!parentEl && fiber.return) {
+    parentEl = fiber.return.el;
+  }
+  return parentEl as HTMLElement;
 }
 
 function commitUnitOfWork(fiber?: Fiber) {
   if (!fiber) {
     return;
   }
-  // 如果 fiber 中没有对应的 dom，需要初始化 dom 节点
-  if (!fiber.dom) {
-    fiber.dom = commitEffectMutation(fiber);
-  }
-  // 如果 fiber 有父 fiber，需要挂载该 fiber 的 dom 到父 fiber 的 dom 下
-  if (fiber.return) {
-    (fiber.return.dom as HTMLElement).appendChild(fiber.dom as HTMLElement);
-  }
+  commitEffectMutation(fiber);
+
   commitUnitOfWork(fiber.child);
   commitUnitOfWork(fiber.sibling);
 }
