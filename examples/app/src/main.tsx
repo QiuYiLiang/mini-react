@@ -1,6 +1,5 @@
-import { CompA } from "./CompA";
-import { createElement, createRoot } from "@qiuyl/revue";
+import { createElement } from "@qiuyl/revue";
 
-const root = createRoot(<CompA />);
+const a = <button>click</button>
 
-root.mount(document.getElementById("root") as Element);
+console.log(a)
