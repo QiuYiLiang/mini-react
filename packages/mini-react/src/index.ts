@@ -95,7 +95,7 @@ function commitEffectMutation(fiber: Fiber) {
   }
   switch (fiber.flag) {
     case FiberFlag.PLACEMAENT: {
-      const parentEl = findParentEl(fiber);
+      const parentEl = findReturnFiberEl(fiber);
       parentEl.appendChild(fiber.el as HTMLElement);
       break;
     }
@@ -104,7 +104,7 @@ function commitEffectMutation(fiber: Fiber) {
       break;
     }
     case FiberFlag.DELETION: {
-      const parentEl = findParentEl(fiber);
+      const parentEl = findReturnFiberEl(fiber);
       parentEl.removeChild(fiber.el as HTMLElement);
       break;
     }
@@ -225,8 +225,9 @@ function reconcileChildren(fiber: Fiber, children: MiniReactElement[] = []) {
 // 提交 fiberRoot 更新 dom
 function commitRoot() {
   (workInProcessRoot as FiberRoot).deletions.forEach((fiber) => {
-    const parentEl = findParentEl(fiber);
-    parentEl.removeChild(fiber.el as HTMLElement);
+    const parentEl = findReturnFiberEl(fiber);
+    const el = findFiberEl(fiber);
+    parentEl.removeChild(el);
   });
   commitUnitOfWork((workInProcessRoot as FiberRoot).child as Fiber);
 
@@ -234,7 +235,7 @@ function commitRoot() {
   workInProcessRoot = undefined;
 }
 
-function findParentEl(fiber: Fiber) {
+function findReturnFiberEl(fiber: Fiber) {
   let parentEl: HTMLElement | undefined;
   let returnFiber = fiber.return;
   do {
@@ -242,6 +243,16 @@ function findParentEl(fiber: Fiber) {
     returnFiber = returnFiber?.return;
   } while (!parentEl && returnFiber);
   return parentEl as HTMLElement;
+}
+
+function findFiberEl(fiber: Fiber) {
+  let el: HTMLElement | undefined = fiber.el;
+  let childFiber = fiber.child;
+  while (!el && childFiber) {
+    el = childFiber.el;
+    childFiber = childFiber.child;
+  }
+  return el as HTMLElement;
 }
 
 function commitUnitOfWork(fiber?: Fiber) {
@@ -260,14 +271,13 @@ function scheduleUpdateOnFiber(fiber: FiberRoot) {
 }
 
 function createRoot(container: HTMLElement) {
-  const fiberRoot: FiberRoot = (container as any).__fiberRoot__ || {
+  const fiberRoot: FiberRoot = {
     el: container,
     props: {
       children: [],
     },
     deletions: [],
   };
-  (container as any).__fiberRoot__ = fiberRoot;
 
   const render = (element: MiniReactElement) => {
     fiberRoot.props.children = [element];
