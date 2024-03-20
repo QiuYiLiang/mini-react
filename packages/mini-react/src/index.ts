@@ -4,9 +4,15 @@ interface MiniReactElement {
 }
 
 type Children = (MiniReactElement | string)[];
-
+interface RootFiber {
+  dom: HTMLElement;
+  props: {
+    children: MiniReactElement[];
+  };
+}
 interface Fiber {
   dom?: HTMLElement;
+  alternate?: Fiber;
   type: string | Symbol;
   props: Record<string, any>;
   return?: Fiber;
@@ -51,7 +57,8 @@ function createDom(fiber: Fiber) {
   return dom;
 }
 
-let nextUnitOfWork: any = null;
+let workInProcessRoot: Fiber | undefined;
+let nextUnitOfWork: Fiber | undefined;
 
 function workLoop(deadline: IdleDeadline) {
   let shouldYield = false;
@@ -98,14 +105,17 @@ function processUnitOfWork(fiber: Fiber) {
 }
 
 function createRoot(el: HTMLElement) {
+  const rootFiber: RootFiber = {
+    dom: el,
+    props: {
+      children: [],
+    },
+  };
+  (el as any).__rootFiber__ = rootFiber;
+
   const render = (element: MiniReactElement) => {
-    const rootFiber = {
-      dom: el,
-      props: {
-        children: [element],
-      },
-    };
-    nextUnitOfWork = rootFiber;
+    rootFiber.props.children = [element];
+    nextUnitOfWork = rootFiber as unknown as Fiber;
   };
   return {
     render,
