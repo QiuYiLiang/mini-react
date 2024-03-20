@@ -5,7 +5,7 @@ interface MiniReactElement {
 
 type Children = (MiniReactElement | string)[];
 interface FiberRoot extends BaseFiber {
-  dom: HTMLElement;
+  el: HTMLElement;
   alternate?: FiberRoot;
   props: {
     children: MiniReactElement[];
@@ -57,10 +57,10 @@ function createElement(
   };
 }
 
-function updateDom(fiber: Fiber) {
+function updateProps(fiber: Fiber) {
   const { children = [], ...props } = fiber.props;
-  const { childre: oldChildren = [], ...oldProps } = (fiber.alternate as Fiber)
-    .props;
+  const { children: oldChildren = [], ...oldProps } =
+    fiber?.alternate?.props || {};
   Object.keys(props).forEach((propKey) => {
     const newValue = props[propKey];
     const oldValue = oldProps[propKey];
@@ -79,13 +79,13 @@ function commitEffectMutation(fiber: Fiber) {
         fiber.type === TEXT_ELEMENT
           ? document.createTextNode("")
           : (document.createElement(fiber.type as string) as any);
-      updateDom(fiber);
+      updateProps(fiber);
       const parentEl = findParentEl(fiber);
       parentEl.appendChild(fiber.el as HTMLElement);
       break;
     }
     case FiberFlag.UPDATE: {
-      updateDom(fiber);
+      updateProps(fiber);
       break;
     }
     case FiberFlag.DELETION: {
@@ -123,8 +123,11 @@ function performUnitOfWork(fiber: Fiber) {
   // 返回下一个需要 fiber，首选 child，其次 兄弟 fiber，最后是一直找父级的兄弟
   let nextFiber = fiber.child || fiber.sibling;
 
-  while (!nextFiber && fiber.return) {
-    nextFiber = fiber.return.sibling;
+  let returnFiber = fiber.return;
+
+  while (!nextFiber && returnFiber) {
+    nextFiber = returnFiber?.sibling;
+    returnFiber = returnFiber?.return;
   }
 
   return nextFiber;
@@ -192,9 +195,11 @@ function commitRoot() {
 
 function findParentEl(fiber: Fiber) {
   let parentEl: HTMLElement | undefined;
-  while (!parentEl && fiber.return) {
-    parentEl = fiber.return.el;
-  }
+  let returnFiber = fiber.return;
+  do {
+    parentEl = returnFiber?.el;
+    returnFiber = returnFiber?.return;
+  } while (!parentEl && returnFiber);
   return parentEl as HTMLElement;
 }
 
@@ -215,10 +220,11 @@ function scheduleUpdateOnFiber(fiber: FiberRoot) {
 
 function createRoot(container: HTMLElement) {
   const fiberRoot: FiberRoot = (container as any).__fiberRoot__ || {
-    dom: container,
+    el: container,
     props: {
       children: [],
     },
+    deletions: [],
   };
   (container as any).__fiberRoot__ = fiberRoot;
 
