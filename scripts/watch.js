@@ -17,11 +17,12 @@ const args = require("minimist")(process.argv.slice(2));
 const target = args._[0] || config.defaultWatch;
 const formats = (args.f || "es").split(",");
 
+const packageDir = resolve(__dirname, `../packages/${target}`);
+
 const pkg = require(resolve(packageDir, "./package.json"));
 
 const buildOptions = pkg.buildOptions;
 
-const packageDir = resolve(__dirname, `../packages/${target}`);
 
 const inputOptions = {
   input: resolve(packageDir, `./src/index.ts`),

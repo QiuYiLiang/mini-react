@@ -1,5 +1,5 @@
 {
-  "name": "revue",
+  "name": "mini-react",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -12,6 +12,6 @@
     "@types/react": "^18.0.26",
     "typescript": "^4.6.4",
     "vite": "^3.2.3",
-    "@qiuyl/revue": "workspace: *"
+    "@qiuyl/mini-react": "workspace: *"
   }
 }

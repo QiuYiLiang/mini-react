@@ -1,6 +1,6 @@
 {
-  "defaultWatch": "revue",
-  "targets": ["revue"],
+  "defaultWatch": "mini-react",
+  "targets": ["mini-react"],
   "external": [],
   "globals": [],
   "sourcemap": true

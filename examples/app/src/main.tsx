@@ -1,4 +1,4 @@
-import { createElement } from "@qiuyl/revue";
+import { createElement } from "@qiuyl/mini-react";
 
 const a = <button>click</button>
 

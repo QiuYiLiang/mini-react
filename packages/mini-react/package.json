@@ -1,5 +1,5 @@
 {
-  "name": "@qiuyl/revue",
+  "name": "@qiuyl/mini-react",
   "version": "1.0.0",
   "description": "",
   "keywords": [],
@@ -13,13 +13,13 @@
   "files": [
     "dist"
   ],
-  "main": "./dist/revue.cjs.js",
-  "module": "./dist/revue.es.js",
+  "main": "./dist/mini-react.cjs.js",
+  "module": "./dist/mini-react.es.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "import": "./dist/revue.es.js",
-      "require": "./dist/revue.cjs.js",
+      "import": "./dist/mini-react.es.js",
+      "require": "./dist/mini-react.cjs.js",
       "types": "./dist/index.d.ts"
     }
   }

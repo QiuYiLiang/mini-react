@@ -62,9 +62,9 @@ importers:
 
   examples/app:
     devDependencies:
-      '@qiuyl/revue':
+      '@qiuyl/mini-react':
         specifier: 'workspace: *'
-        version: link:../../packages/revue
+        version: link:../../packages/mini-react
       '@types/react':
         specifier: ^18.0.26
         version: 18.0.26
@@ -75,7 +75,7 @@ importers:
         specifier: ^3.2.3
         version: 3.2.5
 
-  packages/revue: {}
+  packages/mini-react: {}
 
 packages:
 
