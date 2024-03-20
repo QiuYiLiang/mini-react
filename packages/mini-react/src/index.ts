@@ -30,10 +30,16 @@ interface FunctionComponent {
   (props: Record<string, any>): MiniReactElement;
 }
 
+interface Hook {
+  state: any;
+  queue: any;
+}
+
 interface Fiber extends BaseFiber {
   type: string | Symbol | FunctionComponent;
   el?: HTMLElement;
   alternate?: Fiber;
+  hooks?: Hook[];
   flag: FiberFlag;
 }
 
@@ -114,6 +120,8 @@ function commitEffectMutation(fiber: Fiber) {
 let completeRoot: FiberRoot | undefined;
 let workInProcessRoot: FiberRoot | undefined;
 let nextUnitOfWork: Fiber | undefined;
+let workInProcessFiber: Fiber | undefined;
+let hookIndex: number | undefined;
 
 function workLoop(deadline: IdleDeadline) {
   let shouldYield = false;
@@ -156,6 +164,9 @@ function isFunctionComponent(fiber: Fiber) {
 }
 
 function updateFunctionComponent(fiber: Fiber) {
+  workInProcessFiber = fiber;
+  hookIndex = 0;
+  workInProcessFiber.hooks = [];
   reconcileChildren(fiber, [(fiber.type as FunctionComponent)(fiber.props)]);
 }
 
@@ -271,17 +282,15 @@ function scheduleUpdateOnFiber(fiber: FiberRoot) {
 }
 
 function createRoot(container: HTMLElement) {
-  const fiberRoot: FiberRoot = {
-    el: container,
-    props: {
-      children: [],
-    },
-    deletions: [],
-  };
-
   const render = (element: MiniReactElement) => {
-    fiberRoot.props.children = [element];
-    fiberRoot.alternate = completeRoot;
+    const fiberRoot: FiberRoot = {
+      el: container,
+      props: {
+        children: [element],
+      },
+      alternate: completeRoot,
+      deletions: [],
+    };
     scheduleUpdateOnFiber(fiberRoot);
   };
   return {
@@ -289,7 +298,41 @@ function createRoot(container: HTMLElement) {
   };
 }
 
+type SetStateAction<V> = V | ((value: V) => V);
+
+function useState<V>(initial: V) {
+  const oldHook = workInProcessFiber?.alternate?.hooks?.[hookIndex as number];
+  const hook = oldHook || {
+    state: initial,
+    queue: [],
+  };
+  hook.queue.forEach((action: any) => {
+    hook.state = action instanceof Function ? action(hook.state) : action;
+  });
+  hook.queue = [];
+
+  workInProcessFiber!.hooks!.push(hook);
+  hookIndex!++;
+
+  const setState = (action: SetStateAction<V>) => {
+    hook.queue.push(action);
+    const fiberRoot: FiberRoot = {
+      el: completeRoot!.el,
+      props: completeRoot!.props,
+      alternate: completeRoot,
+      deletions: [],
+    };
+    scheduleUpdateOnFiber(fiberRoot);
+  };
+
+  return [
+    hook.state as V,
+    setState as (action: SetStateAction<V>) => void,
+  ] as const;
+}
+
 export default {
   createElement,
   createRoot,
+  useState,
 };
