@@ -4,6 +4,7 @@ interface MiniReactElement {
 }
 
 type Children = (MiniReactElement | string)[];
+
 interface FiberRoot extends BaseFiber {
   el: HTMLElement;
   alternate?: FiberRoot;
@@ -25,8 +26,12 @@ enum FiberFlag {
   PLACEMAENT,
 }
 
+interface FunctionComponent {
+  (props: Record<string, any>): MiniReactElement;
+}
+
 interface Fiber extends BaseFiber {
-  type: string | Symbol;
+  type: string | Symbol | FunctionComponent;
   el?: HTMLElement;
   alternate?: Fiber;
   flag: FiberFlag;
@@ -44,7 +49,7 @@ function createElement(
     props: {
       ...props,
       children: children.map((element) =>
-        typeof element === "string"
+        typeof element !== "object"
           ? {
               type: TEXT_ELEMENT,
               props: {
@@ -66,20 +71,30 @@ function updateProps(fiber: Fiber) {
     const oldValue = oldProps[propKey];
     // prop 改变后更新 dom
     if (newValue !== oldValue) {
-      (fiber.el as HTMLElement as any)[propKey] = newValue;
+      const el = fiber.el as HTMLElement as any;
+      const isEvent =
+        propKey.startsWith("on") &&
+        propKey.length > 2 &&
+        newValue instanceof Function;
+      if (isEvent) {
+        let eventName = propKey.substring(2);
+        eventName = eventName.charAt(0).toLowerCase() + eventName.substring(1);
+        el.removeEventListener(eventName, oldValue);
+        el.addEventListener(eventName, newValue);
+      } else {
+        el[propKey] = newValue;
+      }
     }
   });
 }
 
 // 提交 fiber 效果突变，更新 dom
 function commitEffectMutation(fiber: Fiber) {
+  if (isFunctionComponent(fiber)) {
+    return;
+  }
   switch (fiber.flag) {
     case FiberFlag.PLACEMAENT: {
-      fiber.el =
-        fiber.type === TEXT_ELEMENT
-          ? document.createTextNode("")
-          : (document.createElement(fiber.type as string) as any);
-      updateProps(fiber);
       const parentEl = findParentEl(fiber);
       parentEl.appendChild(fiber.el as HTMLElement);
       break;
@@ -117,8 +132,11 @@ requestIdleCallback(workLoop);
 
 // 执行 fiber 初始化工作
 function performUnitOfWork(fiber: Fiber) {
-  const children = (fiber.props.children || []) as MiniReactElement[];
-  reconcileChildren(fiber, children);
+  if (isFunctionComponent(fiber)) {
+    updateFunctionComponent(fiber);
+  } else {
+    updateHostComponent(fiber);
+  }
 
   // 返回下一个需要 fiber，首选 child，其次 兄弟 fiber，最后是一直找父级的兄弟
   let nextFiber = fiber.child || fiber.sibling;
@@ -133,8 +151,31 @@ function performUnitOfWork(fiber: Fiber) {
   return nextFiber;
 }
 
+function isFunctionComponent(fiber: Fiber) {
+  return fiber.type instanceof Function;
+}
+
+function updateFunctionComponent(fiber: Fiber) {
+  reconcileChildren(fiber, [(fiber.type as FunctionComponent)(fiber.props)]);
+}
+
+function updateHostComponent(fiber: Fiber) {
+  if (!fiber.el) {
+    createEl(fiber);
+  }
+  reconcileChildren(fiber, fiber.props.children);
+}
+
+function createEl(fiber: Fiber) {
+  fiber.el =
+    fiber.type === TEXT_ELEMENT
+      ? document.createTextNode("")
+      : (document.createElement(fiber.type as string) as any);
+  updateProps(fiber);
+}
+
 // 调和 children
-function reconcileChildren(fiber: Fiber, children: MiniReactElement[]) {
+function reconcileChildren(fiber: Fiber, children: MiniReactElement[] = []) {
   let index = 0;
   let prevFiber: Fiber | undefined;
   let oldFiber: Fiber | undefined = fiber.alternate?.child;
