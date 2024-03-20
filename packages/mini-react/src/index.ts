@@ -101,8 +101,14 @@ function processUnitOfWork(fiber: Fiber) {
     prevFiber = newFiber;
   }
 
-  // 返回下一个需要 fiber，首选 child，其次 兄弟 fiber，最后是 父级的兄弟
-  return fiber.child || fiber.sibling || fiber.return?.sibling;
+  // 返回下一个需要 fiber，首选 child，其次 兄弟 fiber，最后是一直找父级的兄弟
+  let nextFiber = fiber.child || fiber.sibling;
+
+  while (!nextFiber && fiber.return) {
+    nextFiber = fiber.return.sibling;
+  }
+
+  return nextFiber;
 }
 
 // 提交 fiberRoot 更新 dom
