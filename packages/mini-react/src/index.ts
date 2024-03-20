@@ -82,11 +82,25 @@ requestIdleCallback(workLoop);
 
 // 执行 fiber 初始化工作
 function performUnitOfWork(fiber: Fiber) {
-  const elements = (fiber.props.children || []) as MiniReactElement[];
+  const children = (fiber.props.children || []) as MiniReactElement[];
+  reconcileChildren(fiber, children);
+
+  // 返回下一个需要 fiber，首选 child，其次 兄弟 fiber，最后是一直找父级的兄弟
+  let nextFiber = fiber.child || fiber.sibling;
+
+  while (!nextFiber && fiber.return) {
+    nextFiber = fiber.return.sibling;
+  }
+
+  return nextFiber;
+}
+
+// 调和 children
+function reconcileChildren(fiber: Fiber, children: MiniReactElement[]) {
   let index = 0;
   let prevFiber: Fiber | undefined;
-  while (index < elements.length) {
-    const element = elements[index];
+  while (index < children.length) {
+    const element = children[index];
     const newFiber: Fiber = {
       type: element.type,
       props: element.props,
@@ -100,15 +114,6 @@ function performUnitOfWork(fiber: Fiber) {
     index++;
     prevFiber = newFiber;
   }
-
-  // 返回下一个需要 fiber，首选 child，其次 兄弟 fiber，最后是一直找父级的兄弟
-  let nextFiber = fiber.child || fiber.sibling;
-
-  while (!nextFiber && fiber.return) {
-    nextFiber = fiber.return.sibling;
-  }
-
-  return nextFiber;
 }
 
 // 提交 fiberRoot 更新 dom
