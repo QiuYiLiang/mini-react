@@ -4,20 +4,22 @@ interface MiniReactElement {
 }
 
 type Children = (MiniReactElement | string)[];
-interface RootFiber {
+interface RootFiber extends BaseFiber {
   dom: HTMLElement;
   props: {
     children: MiniReactElement[];
   };
 }
-interface Fiber {
+interface BaseFiber {
   dom?: HTMLElement;
   alternate?: Fiber;
-  type: string | Symbol;
   props: Record<string, any>;
   return?: Fiber;
   child?: Fiber;
   sibling?: Fiber;
+}
+interface Fiber extends BaseFiber {
+  type: string | Symbol;
 }
 
 const TEXT_ELEMENT = Symbol.for("TEXT_ELEMENT");
@@ -45,7 +47,8 @@ function createElement(
   };
 }
 
-function createDom(fiber: Fiber) {
+// 提交 fiber 效果突变，更新 dom
+function commitEffectMutation(fiber: Fiber) {
   const dom =
     fiber.type === TEXT_ELEMENT
       ? document.createTextNode("")
@@ -68,6 +71,7 @@ function workLoop(deadline: IdleDeadline) {
   }
   // fiber 构造完毕，提交更新
   if (!nextUnitOfWork && workInProcessRoot) {
+    commitRoot();
   }
   requestIdleCallback(workLoop);
 }
@@ -76,14 +80,6 @@ requestIdleCallback(workLoop);
 
 // 执行 fiber 初始化工作
 function processUnitOfWork(fiber: Fiber) {
-  // 如果 fiber 中没有对应的 dom，需要初始化 dom 节点
-  if (!fiber.dom) {
-    fiber.dom = createDom(fiber);
-  }
-  // 如果 fiber 有父 fiber，需要挂载该 fiber 的 dom 到父 fiber 的 dom 下
-  if (fiber.return) {
-    (fiber.return.dom as HTMLElement).appendChild(fiber.dom as HTMLElement);
-  }
   const elements = (fiber.props.children || []) as MiniReactElement[];
   let index = 0;
   let prevFiber: Fiber | undefined;
@@ -105,6 +101,28 @@ function processUnitOfWork(fiber: Fiber) {
 
   // 返回下一个需要 fiber，首选 child，其次 兄弟 fiber，最后是 父级的兄弟
   return fiber.child || fiber.sibling || fiber.return?.sibling;
+}
+
+// 提交 rootFiber 更新 dom
+function commitRoot() {
+  commitUnitOfWork((workInProcessRoot as RootFiber).child as Fiber);
+  workInProcessRoot = undefined;
+}
+
+function commitUnitOfWork(fiber?: Fiber) {
+  if (!fiber) {
+    return;
+  }
+  // 如果 fiber 中没有对应的 dom，需要初始化 dom 节点
+  if (!fiber.dom) {
+    fiber.dom = commitEffectMutation(fiber);
+  }
+  // 如果 fiber 有父 fiber，需要挂载该 fiber 的 dom 到父 fiber 的 dom 下
+  if (fiber.return) {
+    (fiber.return.dom as HTMLElement).appendChild(fiber.dom as HTMLElement);
+  }
+  commitUnitOfWork(fiber.child);
+  commitUnitOfWork(fiber.sibling);
 }
 
 function createRoot(el: HTMLElement) {
