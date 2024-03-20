@@ -1,5 +1,7 @@
-import { createElement } from "@qiuyl/mini-react";
+import MiniReact from "@qiuyl/mini-react";
+
+/** @jsx MiniReact.createElement */
 
 const a = <button>click</button>
 
-console.log(a)
+console.log(a, MiniReact)
