@@ -1,6 +1,5 @@
-import MiniReact from "@qiuyl/mini-react";
-
 /** @jsx MiniReact.createElement */
+import MiniReact from "@qiuyl/mini-react";
 
 const a = <button>click</button>
 
