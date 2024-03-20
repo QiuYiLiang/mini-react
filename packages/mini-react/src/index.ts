@@ -6,13 +6,12 @@ interface MiniReactElement {
 type Children = (MiniReactElement | string)[];
 interface FiberRoot extends BaseFiber {
   dom: HTMLElement;
+  alternate?: FiberRoot;
   props: {
     children: MiniReactElement[];
   };
 }
 interface BaseFiber {
-  dom?: HTMLElement;
-  alternate?: Fiber;
   props: Record<string, any>;
   return?: Fiber;
   child?: Fiber;
@@ -20,6 +19,8 @@ interface BaseFiber {
 }
 interface Fiber extends BaseFiber {
   type: string | Symbol;
+  dom?: HTMLElement;
+  alternate?: Fiber;
 }
 
 const TEXT_ELEMENT = Symbol.for("TEXT_ELEMENT");
@@ -60,6 +61,7 @@ function commitEffectMutation(fiber: Fiber) {
   return dom;
 }
 
+let completeRoot: FiberRoot | undefined;
 let workInProcessRoot: FiberRoot | undefined;
 let nextUnitOfWork: Fiber | undefined;
 
@@ -106,6 +108,7 @@ function processUnitOfWork(fiber: Fiber) {
 // 提交 fiberRoot 更新 dom
 function commitRoot() {
   commitUnitOfWork((workInProcessRoot as FiberRoot).child as Fiber);
+  completeRoot = workInProcessRoot;
   workInProcessRoot = undefined;
 }
 
@@ -130,17 +133,18 @@ function scheduleUpdateOnFiber(fiber: FiberRoot) {
   nextUnitOfWork = fiber as unknown as Fiber;
 }
 
-function createRoot(el: HTMLElement) {
-  const fiberRoot: FiberRoot = (el as any).__fiberRoot__ || {
-    dom: el,
+function createRoot(container: HTMLElement) {
+  const fiberRoot: FiberRoot = (container as any).__fiberRoot__ || {
+    dom: container,
     props: {
       children: [],
     },
   };
-  (el as any).__fiberRoot__ = fiberRoot;
+  (container as any).__fiberRoot__ = fiberRoot;
 
   const render = (element: MiniReactElement) => {
     fiberRoot.props.children = [element];
+    fiberRoot.alternate = completeRoot;
     scheduleUpdateOnFiber(fiberRoot);
   };
   return {
