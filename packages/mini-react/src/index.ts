@@ -190,8 +190,9 @@ function reconcileChildren(fiber: Fiber, children: MiniReactElement[] = []) {
   let index = 0;
   let prevFiber: Fiber | undefined;
   let oldFiber: Fiber | undefined = fiber.alternate?.child;
-  while (index < children.length || oldFiber) {
-    const element = children[index];
+  const flatChildren = children.flat();
+  while (index < flatChildren.length || oldFiber) {
+    const element = flatChildren[index];
     let newFiber: Fiber | undefined;
     const sameType = oldFiber?.type === element?.type;
 

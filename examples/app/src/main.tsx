@@ -8,6 +8,23 @@ const C = () => {
     setDisplay((display) => !display);
   };
   const [todoList, setTodoList] = MiniReact.useState([1, 2, 3, 4]);
+  const a = (
+    <ul>
+      <li>1</li>
+      <li>2</li>
+      <li>3</li>
+    </ul>
+  );
+  const b = (
+    <ul>
+      {todoList.map((v) => {
+        return <li>{v}</li>;
+      })}
+      {todoList.map((v) => {
+        return <li>{v}</li>;
+      })}
+    </ul>
+  );
   return (
     <div>
       <button
@@ -20,11 +37,8 @@ const C = () => {
         {display && <h1>hhh</h1>}
         {count}
       </button>
-      <ul>
-        {todoList.map((v) => {
-          return <li>{v}</li>;
-        })}
-      </ul>
+      {a}
+      {b}
     </div>
   );
 };
