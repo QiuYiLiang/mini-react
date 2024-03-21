@@ -118,9 +118,9 @@ function commitEffectMutation(fiber: Fiber) {
 }
 
 let completeRoot: FiberRoot | undefined;
-let workInProcessRoot: FiberRoot | undefined;
+let workInProgressRoot: FiberRoot | undefined;
 let nextUnitOfWork: Fiber | undefined;
-let workInProcessFiber: Fiber | undefined;
+let workInProgressFiber: Fiber | undefined;
 let hookIndex: number | undefined;
 
 function workLoop(deadline: IdleDeadline) {
@@ -130,7 +130,9 @@ function workLoop(deadline: IdleDeadline) {
     shouldYield = deadline.timeRemaining() < 1;
   }
   // fiber 构造完毕，提交更新
-  if (!nextUnitOfWork && workInProcessRoot) {
+  if (!nextUnitOfWork && workInProgressRoot) {
+    (window as any).a = workInProgressRoot;
+    console.log(111);
     commitRoot();
   }
   requestIdleCallback(workLoop);
@@ -164,9 +166,9 @@ function isFunctionComponent(fiber: Fiber) {
 }
 
 function updateFunctionComponent(fiber: Fiber) {
-  workInProcessFiber = fiber;
+  workInProgressFiber = fiber;
   hookIndex = 0;
-  workInProcessFiber.hooks = [];
+  workInProgressFiber.hooks = [];
   reconcileChildren(fiber, [(fiber.type as FunctionComponent)(fiber.props)]);
 }
 
@@ -215,7 +217,7 @@ function reconcileChildren(fiber: Fiber, children: MiniReactElement[] = []) {
       }
       if (oldFiber) {
         oldFiber.flag = FiberFlag.DELETION;
-        (workInProcessRoot as FiberRoot).deletions.push(oldFiber);
+        (workInProgressRoot as FiberRoot).deletions.push(oldFiber);
       }
     }
 
@@ -237,15 +239,15 @@ function reconcileChildren(fiber: Fiber, children: MiniReactElement[] = []) {
 
 // 提交 fiberRoot 更新 dom
 function commitRoot() {
-  (workInProcessRoot as FiberRoot).deletions.forEach((fiber) => {
+  (workInProgressRoot as FiberRoot).deletions.forEach((fiber) => {
     const parentEl = findReturnFiberEl(fiber);
     const el = findFiberEl(fiber);
     parentEl.removeChild(el);
   });
-  commitUnitOfWork((workInProcessRoot as FiberRoot).child as Fiber);
+  commitUnitOfWork((workInProgressRoot as FiberRoot).child as Fiber);
 
-  completeRoot = workInProcessRoot;
-  workInProcessRoot = undefined;
+  completeRoot = workInProgressRoot;
+  workInProgressRoot = undefined;
 }
 
 function findReturnFiberEl(fiber: Fiber) {
@@ -278,9 +280,9 @@ function commitUnitOfWork(fiber?: Fiber) {
   commitUnitOfWork(fiber.sibling);
 }
 
-function scheduleUpdateOnFiber(fiber: FiberRoot) {
-  workInProcessRoot = fiber;
-  nextUnitOfWork = fiber as unknown as Fiber;
+function scheduleUpdateOnFiber(root: FiberRoot) {
+  workInProgressRoot = root;
+  nextUnitOfWork = root as unknown as Fiber;
 }
 
 function createRoot(container: HTMLElement) {
@@ -303,7 +305,7 @@ function createRoot(container: HTMLElement) {
 type SetStateAction<V> = V | ((value: V) => V);
 
 function useState<V>(initial: V) {
-  const oldHook = workInProcessFiber?.alternate?.hooks?.[hookIndex as number];
+  const oldHook = workInProgressFiber?.alternate?.hooks?.[hookIndex as number];
   const hook = oldHook || {
     state: initial,
     queue: [],
@@ -313,7 +315,7 @@ function useState<V>(initial: V) {
   });
   hook.queue = [];
 
-  workInProcessFiber!.hooks!.push(hook);
+  workInProgressFiber!.hooks!.push(hook);
   hookIndex!++;
 
   const setState = (action: SetStateAction<V>) => {
