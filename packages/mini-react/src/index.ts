@@ -190,6 +190,7 @@ function reconcileChildren(fiber: Fiber, children: MiniReactElement[] = []) {
   let index = 0;
   let prevFiber: Fiber | undefined;
   let oldFiber: Fiber | undefined = fiber.alternate?.child;
+  // TODO: 调和数组的 children，根据 key 复用，目前展平
   const flatChildren = children.flat();
   while (index < flatChildren.length || oldFiber) {
     const element = flatChildren[index];
