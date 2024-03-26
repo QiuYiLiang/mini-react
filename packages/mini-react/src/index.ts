@@ -37,7 +37,7 @@ interface Hook {
 
 interface Fiber extends BaseFiber {
   type: string | Symbol | FunctionComponent;
-  el?: HTMLElement;
+  stateNode?: HTMLElement;
   alternate?: Fiber;
   hooks?: Hook[];
   flag: FiberFlag;
@@ -77,7 +77,7 @@ function updateProps(fiber: Fiber) {
     const oldValue = oldProps[propKey];
     // prop 改变后更新 dom
     if (newValue !== oldValue) {
-      const el = fiber.el as HTMLElement as any;
+      const el = fiber.stateNode as HTMLElement as any;
       const isEvent =
         propKey.startsWith("on") &&
         propKey.length > 2 &&
@@ -99,10 +99,13 @@ function commitEffectMutation(fiber: Fiber) {
   if (isFunctionComponent(fiber)) {
     return;
   }
+  if (!fiber.stateNode) {
+    createEl(fiber);
+  }
   switch (fiber.flag) {
     case FiberFlag.PLACEMAENT: {
       const parentEl = findReturnFiberEl(fiber);
-      parentEl.appendChild(fiber.el as HTMLElement);
+      parentEl.appendChild(fiber.stateNode as HTMLElement);
       break;
     }
     case FiberFlag.UPDATE: {
@@ -111,7 +114,7 @@ function commitEffectMutation(fiber: Fiber) {
     }
     case FiberFlag.DELETION: {
       const parentEl = findReturnFiberEl(fiber);
-      parentEl.removeChild(fiber.el as HTMLElement);
+      parentEl.removeChild(fiber.stateNode as HTMLElement);
       break;
     }
   }
@@ -173,14 +176,11 @@ function updateFunctionComponent(fiber: Fiber) {
 }
 
 function updateHostComponent(fiber: Fiber) {
-  if (!fiber.el) {
-    createEl(fiber);
-  }
   reconcileChildren(fiber, fiber.props.children);
 }
 
 function createEl(fiber: Fiber) {
-  fiber.el =
+  fiber.stateNode =
     fiber.type === TEXT_ELEMENT
       ? document.createTextNode("")
       : (document.createElement(fiber.type as string) as any);
@@ -204,7 +204,7 @@ function reconcileChildren(fiber: Fiber, children: MiniReactElement[] = []) {
         type: element.type,
         props: element.props,
         alternate: oldFiber,
-        el: (oldFiber as Fiber).el,
+        stateNode: (oldFiber as Fiber).stateNode,
         flag: FiberFlag.UPDATE,
       };
     } else {
@@ -254,17 +254,17 @@ function findReturnFiberEl(fiber: Fiber) {
   let parentEl: HTMLElement | undefined;
   let returnFiber = fiber.return;
   do {
-    parentEl = returnFiber?.el;
+    parentEl = returnFiber?.stateNode;
     returnFiber = returnFiber?.return;
   } while (!parentEl && returnFiber);
   return parentEl as HTMLElement;
 }
 
 function findFiberEl(fiber: Fiber) {
-  let el: HTMLElement | undefined = fiber.el;
+  let el: HTMLElement | undefined = fiber.stateNode;
   let childFiber = fiber.child;
   while (!el && childFiber) {
-    el = childFiber.el;
+    el = childFiber.stateNode;
     childFiber = childFiber.child;
   }
   return el as HTMLElement;
