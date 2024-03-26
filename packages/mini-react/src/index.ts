@@ -6,7 +6,7 @@ interface MiniReactElement {
 type Children = (MiniReactElement | string)[];
 
 interface FiberRoot extends BaseFiber {
-  el: HTMLElement;
+  stateNode: HTMLElement;
   alternate?: FiberRoot;
   props: {
     children: MiniReactElement[];
@@ -100,7 +100,7 @@ function commitEffectMutation(fiber: Fiber) {
     return;
   }
   if (!fiber.stateNode) {
-    createEl(fiber);
+    createInstance(fiber);
   }
   switch (fiber.flag) {
     case FiberFlag.PLACEMAENT: {
@@ -179,7 +179,7 @@ function updateHostComponent(fiber: Fiber) {
   reconcileChildren(fiber, fiber.props.children);
 }
 
-function createEl(fiber: Fiber) {
+function createInstance(fiber: Fiber) {
   fiber.stateNode =
     fiber.type === TEXT_ELEMENT
       ? document.createTextNode("")
@@ -288,7 +288,7 @@ function scheduleUpdateOnFiber(root: FiberRoot) {
 function createRoot(container: HTMLElement) {
   const render = (element: MiniReactElement) => {
     const fiberRoot: FiberRoot = {
-      el: container,
+      stateNode: container,
       props: {
         children: [element],
       },
@@ -321,7 +321,7 @@ function useState<V>(initial: V) {
   const setState = (action: SetStateAction<V>) => {
     hook.queue.push(action);
     const fiberRoot: FiberRoot = {
-      el: completeRoot!.el,
+      stateNode: completeRoot!.stateNode,
       props: completeRoot!.props,
       alternate: completeRoot,
       deletions: [],
